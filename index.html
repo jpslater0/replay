@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610081647">
+<meta name="build" content="202610121544">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -221,6 +221,21 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
  font-weight:600;text-align:center;max-width:26ch;line-height:1.6}
 .pre .pbar{width:170px;height:3px;background:rgba(255,255,255,.2);overflow:hidden;border-radius:2px}
 .pre .pbar i{display:block;height:100%;width:0;background:#fff}
+/* The payoff: after the clip proves the purchases, she says so herself. */
+.outro{position:absolute;inset:0;z-index:12;background:var(--bg);color:#fff;
+ display:none;flex-direction:column;align-items:center;justify-content:center;
+ gap:16px;padding:0 26px;text-align:center;pointer-events:none}
+.outro.on{display:flex}
+.outro .ol{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;
+ color:rgba(255,255,255,.65)}
+.outro .oq{font-size:19px;font-weight:700;line-height:1.42;letter-spacing:-.2px;
+ max-width:24ch}
+.outro .oq b{color:#ffd76b;font-weight:800}
+.outro .ow{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
+ color:rgba(255,255,255,.75)}
+.outro .obar{width:150px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;
+ overflow:hidden}
+.outro .obar i{display:block;height:100%;width:0;background:#ffd76b}
 /* what the artist actually said, under the chat */
 /* A lower third for what the artist is actually saying. Backed, so it reads as
    a caption rather than colliding with the chat behind it. */
@@ -484,6 +499,12 @@ class Slide{
         <div class="pl">${esc(d.preroll.note)}</div>
         <div class="pbar"><i data-pbar></i></div>
       </div>`:''}
+      ${d.outro?`<div class="outro" data-outro>
+        <div class="ol">${esc(d.outro.label||'')}</div>
+        <div class="oq">&ldquo;${d.outro.quote}&rdquo;</div>
+        <div class="ow">${esc(d.outro.who||'')}</div>
+        <div class="obar"><i data-obar></i></div>
+      </div>`:''}
       <div class="gate" data-gate>
         ${gateHead(d)}
         <div class="gbot">
@@ -548,6 +569,7 @@ class Slide{
     }
     this.capEl=this.el.querySelector('[data-cap]');
     this.preEl=this.el.querySelector('[data-pre]');
+    this.outEl=this.el.querySelector('[data-outro]');
     this.seen=new Set(); this.buys=0; this.capAt=-1;
     this.at=d.start/1000;                 // playhead, in show seconds
     if(d.audio){
@@ -726,6 +748,7 @@ class Slide{
      the counters carry on from where they stopped. */
   again(){
     if(this.hold) this.hold.classList.remove('on');
+    this.clearOutro();
     this.shown=0; this._lastI=undefined; this._bigV=undefined; this.buys=0;
     this._mw=undefined; this.capAt=-1;
     if(this.seen) this.seen.clear();
@@ -803,11 +826,13 @@ class Slide{
 
   tick(){
     const d=this.d; if(d.kind==='note')return;
+    if(this.outroOn) return this.outroTick();
     const el=this.now()-d.start/1000;
     if(el<0){this.seek(d.start/1000);return;}
     if(el>d.dur/1000){
-      this.pause();
       if(this.lv&&this.lv.phase&&this.d.phaseEnd) this.lv.phase.textContent=this.d.phaseEnd;
+      if(d.outro&&!this.outroDone){ this.startOutro(); return; }
+      this.pause();
       if(App.slides[App.cur]===this) App.ended(this);
       return;
     }
@@ -837,6 +862,42 @@ class Slide{
       b.style.right=(Math.random()*40)+'px';
       b.style.animationDuration=(2.1+Math.random()*1.1)+'s';
       this.heartsEl.appendChild(b); setTimeout(()=>b.remove(),3400);
+    }
+  }
+
+  /* The clip shows twenty eight people buying while she reads their names. Then she
+     says it out loud herself. Her own words are the proof, so they play last. */
+  startOutro(){
+    const o=this.d.outro;
+    this.outroOn=true;
+    if(this.outEl){
+      this.outEl.classList.add('on');
+      const bar=this.outEl.querySelector('[data-obar]');
+      if(bar){ bar.style.transition='none'; bar.style.width='0';
+        requestAnimationFrame(()=>{ bar.style.transition=`width ${o.dur}s linear`; bar.style.width='100%'; }); }
+    }
+    this.seek(o.fromSec);
+    if(this.audio) this.audio.play().catch(()=>{}); else this.at=o.fromSec;
+  }
+  outroTick(){
+    const o=this.d.outro, t=this.now();
+    // the readout would otherwise still show the clip's last second and its chat rate,
+    // while she is plainly speaking four minutes later in the show
+    if(App.slides[App.cur]===this) App.hudAt(this.d, t, (t-o.fromSec)/o.dur);
+    if(t>=o.fromSec+o.dur) this.endOutro();
+  }
+  endOutro(){
+    this.outroOn=false; this.outroDone=true;
+    this.pause();
+    if(this.outEl) this.outEl.classList.remove('on');
+    if(App.slides[App.cur]===this) App.ended(this);
+  }
+  clearOutro(){
+    this.outroOn=false; this.outroDone=false;
+    if(this.outEl){
+      this.outEl.classList.remove('on');
+      const bar=this.outEl.querySelector('[data-obar]');
+      if(bar){ bar.style.transition='none'; bar.style.width='0'; }
     }
   }
 
@@ -881,23 +942,14 @@ class Slide{
     };
     this.preRAF=requestAnimationFrame(step);
   }
-  reset(){
-    clearTimeout(this.dw); this.started=false;
-    if(!this.gate)return;
-    this.gate.style.display='';
-    const bar=this.gate.querySelector('[data-dwell]');
-    if(bar){bar.classList.remove('run');bar.style.transitionDuration='0ms';}
-    this.pause(); this.seek(this.d.start/1000); this.shown=-1;
-    if(this.d.kind!=='note') this.mic=null;
-    if(this.box)this.draw(0);
-  }
 
   play(){
     if(!this.d)return;
     if(App.slides[App.cur]!==this) return;        // never play off-screen
     App.silenceOthers(this);                      // only one clip is ever audible
     const s=this.d.start/1000;
-    if(this.now()<s||this.now()>s+this.d.dur/1000)this.seek(s);
+    // the outro deliberately sits outside the clip, so it is not snapped back
+    if(!this.outroOn&&(this.now()<s||this.now()>s+this.d.dur/1000))this.seek(s);
     if(this.audio){
       this.audio.play().catch(()=>{});
     }else{
@@ -915,9 +967,30 @@ class Slide{
     this.playing=false;
     if(this.audio)this.audio.pause(); else clearInterval(this.timer);
   }
-  reset(){                       // back to the feed: close the panel, show the card
+  /* Leaving a slide. There were two reset() methods here and the second quietly
+     won, so scrolling away and back resumed mid-clip with the old chat and the
+     old counters still on screen. One method now, doing all of it. */
+  reset(){
+    clearTimeout(this.dw); this.started=false;
+    if(!this.d) return;          // scrolled past before the moment finished loading
     this.openSide(false);
-    if(this.gate) this.gate.style.display='';
+    this.clearOutro();
+    this.pause();
+    if(this.hold) this.hold.classList.remove('on');
+    if(!this.gate) return;
+    this.gate.style.display='';
+    const bar=this.gate.querySelector('[data-dwell]');
+    if(bar){ bar.classList.remove('run'); bar.style.transitionDuration='0ms'; }
+    this.seek(this.d.start/1000);
+    this.shown=-1; this._lastI=undefined; this._bigV=undefined; this.buys=0;
+    this._mw=undefined; this.capAt=-1;
+    if(this.seen) this.seen.clear();
+    if(this.d.kind!=='note') this.mic=null;
+    if(this.lv&&this.lv.big) this.lv.big.textContent='0';
+    if(this.lv&&this.lv.chips) this.lv.chips.innerHTML='';
+    if(this.capEl){ this.capEl.textContent=''; this.capEl.classList.remove('on'); }
+    if(this.lv&&this.lv.phase&&this.d.phaseStart) this.lv.phase.textContent=this.d.phaseStart;
+    if(this.box) this.draw(0);
   }
   get paused(){ return this.audio ? this.audio.paused : !this.playing; }
 }
@@ -1003,6 +1076,14 @@ const App={
   ended(s){
     const i=this.slides.indexOf(s);
     this.goTo(i+1<this.slides.length ? i+1 : 0);     // loop the reel
+  },
+  /* the outro plays from a different part of the show, so it reports that time */
+  hudAt(d,abs,frac){
+    const t=document.getElementById('hudt'), f=document.getElementById('mfill');
+    const rw=document.getElementById('hudrw');
+    if(rw)rw.style.display='none';
+    if(t)t.textContent=`${d.title} — ${fmt(abs)}`;
+    if(f)f.style.width=Math.max(0,Math.min(1,frac))*100+'%';
   },
   hud(rate,el,d){
     const r=document.getElementById('hudr'),t=document.getElementById('hudt'),f=document.getElementById('mfill');
