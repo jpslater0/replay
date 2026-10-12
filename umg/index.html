@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610121544">
+<meta name="build" content="202610121554">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -720,7 +720,10 @@ class Slide{
     const p=Math.max(0,Math.min(1,(sec-this.arcFirst)/this.arcSpan));
     this.lv.head.style.left=(p*100)+'%';
     for(const b of this.bars){
-      const s=+b.dataset.sec, inClip = s>=this.d.start/1000 && s<=(this.d.start+this.d.dur)/1000;
+      // a bar covers [s, s+step), so it belongs to the clip if the two overlap at all;
+      // testing only its start left a 45s clip unlit whenever the step was coarser
+      const s=+b.dataset.sec, step=this.d.arc.step||30;
+      const inClip = s+step > this.d.start/1000 && s < (this.d.start+this.d.dur)/1000;
       b.classList.toggle('lit', s<=sec && inClip);
       b.classList.toggle('past', s<=sec && !inClip);
     }
@@ -881,6 +884,8 @@ class Slide{
   }
   outroTick(){
     const o=this.d.outro, t=this.now();
+    // the outro is minutes later in the same show, so the chart says where
+    if(this.bars.length) this.markHead(t);
     // the readout would otherwise still show the clip's last second and its chat rate,
     // while she is plainly speaking four minutes later in the show
     if(App.slides[App.cur]===this) App.hudAt(this.d, t, (t-o.fromSec)/o.dur);
