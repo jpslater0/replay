@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610121554">
+<meta name="build" content="202610121606">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -881,6 +881,15 @@ class Slide{
     }
     this.seek(o.fromSec);
     if(this.audio) this.audio.play().catch(()=>{}); else this.at=o.fromSec;
+    // timeupdate only fires about every 250ms, which is not accurate enough to stop
+    // inside a gap between two sentences, so the outro is driven frame by frame
+    const loop=()=>{
+      if(!this.outroOn) { this.outRAF=0; return; }
+      if(App.slides[App.cur]!==this){ this.outRAF=0; return; }
+      this.outroTick();
+      if(this.outroOn) this.outRAF=requestAnimationFrame(loop);
+    };
+    this.outRAF=requestAnimationFrame(loop);
   }
   outroTick(){
     const o=this.d.outro, t=this.now();
@@ -893,12 +902,14 @@ class Slide{
   }
   endOutro(){
     this.outroOn=false; this.outroDone=true;
+    if(this.outRAF){ cancelAnimationFrame(this.outRAF); this.outRAF=0; }
     this.pause();
     if(this.outEl) this.outEl.classList.remove('on');
     if(App.slides[App.cur]===this) App.ended(this);
   }
   clearOutro(){
     this.outroOn=false; this.outroDone=false;
+    if(this.outRAF){ cancelAnimationFrame(this.outRAF); this.outRAF=0; }
     if(this.outEl){
       this.outEl.classList.remove('on');
       const bar=this.outEl.querySelector('[data-obar]');
