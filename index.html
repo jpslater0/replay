@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610121606">
+<meta name="build" content="202610151735">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,9 +13,12 @@
 body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overflow:hidden}
 
 /* ---------- feed ---------- */
-#feed{height:100vh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+#feed{height:100vh;overflow-y:scroll;overflow-x:hidden;scroll-snap-type:y mandatory;scroll-behavior:smooth}
 #feed::-webkit-scrollbar{display:none}
-.slide{height:100vh;scroll-snap-align:start;display:grid;place-items:center;position:relative}
+.slide{height:100vh;scroll-snap-align:start;display:grid;place-items:center;position:relative;
+ /* the room keeps its 460px layout box and is scaled down to fit, so on a narrow
+    screen that box is wider than the track and must not scroll the page sideways */
+ overflow:hidden}
 .fit{transform-origin:center center;display:flex;align-items:center;gap:30px;
  transition:transform .55s cubic-bezier(.3,.9,.3,1)}
 /* Scrolling stays a vertical feed, one room per screen, the way people already
@@ -776,7 +779,15 @@ class Slide{
     const k = Math.min(1,(innerHeight-40)/898,(innerWidth-32)/w);
     this.k = k;
     const shift = (wide && !this.fit.classList.contains('open')) ? (430+30)/2*k : 0;
-    this.fit.style.transform = `translateX(${shift}px) scale(${k})`;
+    // place-items does not centre a grid item bigger than its track, and the room
+    // keeps its full 460x898 layout box however far it is scaled down. On a phone
+    // that box is larger than the screen both ways, so the scaled room sat right of
+    // centre and below it, running off the edge and under the readout. Measure where
+    // the box actually landed and correct for it.
+    this.fit.style.transform = 'none';
+    const fixX = innerWidth/2  - (this.fit.offsetLeft + this.fit.offsetWidth/2);
+    const fixY = innerHeight/2 - (this.fit.offsetTop  + this.fit.offsetHeight/2);
+    this.fit.style.transform = `translate(${shift + fixX}px, ${fixY}px) scale(${k})`;
   }
   openSide(on){
     if(!this.fit||!this.wide)return;
