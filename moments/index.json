@@ -163,35 +163,5 @@
   "peak": 58,
   "listens": 13105,
   "hasAudio": true
- },
- {
-  "id": "3558013:208799:45000",
-  "file": "moments/3558013_208799_45000.json",
-  "title": "MILK",
-  "sub": "release party",
-  "date": "11 September 2026",
-  "genre": "J-pop",
-  "channel": "MILK",
-  "accent": "#454545",
-  "msgCount": 1014,
-  "userCount": 640,
-  "peak": 55,
-  "listens": 11533,
-  "hasAudio": true
- },
- {
-  "id": "3573372:574000:45000",
-  "file": "moments/3573372_574000_45000.json",
-  "title": "Sakanaction",
-  "sub": "label staff talk",
-  "date": "17 September 2026",
-  "genre": "J-pop",
-  "channel": "Sakanaction",
-  "accent": "#454545",
-  "msgCount": 180,
-  "userCount": 124,
-  "peak": 23,
-  "listens": 5243,
-  "hasAudio": true
  }
 ]
