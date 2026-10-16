@@ -165,18 +165,18 @@
   "hasAudio": true
  },
  {
-  "id": "3533148:1199000:45000",
-  "file": "moments/3533148_1199000_45000.json",
+  "id": "3533148:1219500:42000",
+  "file": "moments/3533148_1219500_42000.json",
   "title": "King & Prince",
-  "sub": "SoHoney EP party",
+  "sub": "King & Prince ran a party for their SoHoney EP on Tiara. 13,105 people came, and in twenty five minutes on air the record was streamed 22,224 times, with 683 of them typing inside forty five seconds.",
   "date": "2 September 2026",
   "genre": "J-pop",
   "channel": "Tiara",
   "accent": "#e1e1df",
-  "msgCount": 1029,
-  "userCount": 683,
-  "peak": 58,
-  "listens": 13105,
+  "msgCount": 828,
+  "userCount": 579,
+  "peak": 40,
+  "listens": 13126,
   "hasAudio": true
  }
 ]
