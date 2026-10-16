@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610161940">
+<meta name="build" content="202610161954">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -785,7 +785,7 @@ class Slide{
   }
 
   tickNote(){
-    const d=this.d, el=this.audio.currentTime;
+    const d=this.d, el=this.now();            // the room's clock, not the element's
     if(this.lv&&this.lv.phase&&d.phaseLive&&el>0.4) this.lv.phase.textContent=d.phaseLive;
     if(el>d.dur/1000){ this.pause(); if(App.slides[App.cur]===this) App.ended(this); return; }
     const wv=this.nowEl.querySelector('[data-wv]'), vt=this.nowEl.querySelector('[data-vt]');
@@ -1073,10 +1073,16 @@ class Slide{
     this.box.innerHTML=h.join('');
   }
 
-  now(){ return (this.audio && !this.silent) ? this.audio.currentTime : this.at; }
+  /* The room keeps its own time. It used to read the audio element directly and be
+     driven by its timeupdate, which meant anything that stopped the audio starting
+     also stopped the chat, and the whole replay sat there showing one message. The
+     sound is now just sound: when it is genuinely progressing the clock follows it,
+     and when it is not the clock carries on without it. */
+  now(){ return this.at; }
 
   tick(){
-    const d=this.d; if(d.kind==='note')return;
+    const d=this.d;
+    if(d.kind==='note') return this.tickNote();   // the clock drives notes too
     if(this.outroOn) return this.outroTick();
     const el=this.now()-d.start/1000;
     if(el<0){this.seek(d.start/1000);return;}
@@ -1165,7 +1171,7 @@ class Slide{
     }
   }
 
-  seek(t){ if(this.audio)this.audio.currentTime=t; else this.at=t; }
+  seek(t){ this.at=t; if(this.audio){ try{ this.audio.currentTime=t; }catch(e){} } }
 
   /* hold the intro card, then roll. ms=0 starts immediately. */
   begin(ms){
@@ -1216,20 +1222,23 @@ class Slide{
     const s=this.d.start/1000;
     // the outro deliberately sits outside the clip, so it is not snapped back
     if(!this.outroOn&&(this.now()<s||this.now()>s+this.d.dur/1000))this.seek(s);
-    const clock=()=>{                       // drives the room when no audio does
-      clearInterval(this.timer);
-      let last=performance.now();
-      this.timer=setInterval(()=>{
-        const n=performance.now(); this.at+=(n-last)/1000; last=n; this.tick();
-      },100);
-    };
+    clearInterval(this.timer);
+    let last=performance.now(), heard=this.audio?this.audio.currentTime:0;
+    this.timer=setInterval(()=>{
+      const n=performance.now(), a=this.audio;
+      if(a && !a.paused && a.currentTime!==heard){
+        heard=a.currentTime; this.at=a.currentTime;   // the sound is ahead, follow it
+      }else{
+        this.at += (n-last)/1000;                     // no sound, keep going anyway
+      }
+      last=n;
+      this.tick();
+    },100);
     if(this.audio){
-      // if the browser still refuses the audio, the room plays on silently rather
-      // than showing nothing at all: a muted replay beats a dead screen
-      const p=this.audio.play();
-      if(p&&p.catch) p.catch(()=>{ if(this.playing && App.slides[App.cur]===this){
-        this.at=this.now(); this.silent=true; clock(); } });
-    }else clock();
+      // sound is a bonus now, so a refusal here costs the volume and nothing else
+      let p; try{ p=this.audio.play(); }catch(e){ p=null; }
+      if(p&&p.catch) p.catch(()=>{ this.silent=true; });
+    }
     this.playing=true;
     this.gate.style.display='none';
     this.openSide(true);
