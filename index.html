@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162046">
+<meta name="build" content="202610162052">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -495,9 +495,9 @@ function sidePanel(d){
     ${d.sub?`<div class="sub">${d.sub}</div>`:''}
     <div class="readout"><div class="big" data-big>${isNote?num(d.channel.members||0):'0'}</div>
       <div class="unit">${unit}</div></div>
-    ${FX && hasBuy && d.purchases.baseline ? `<div class="ghost">
+    ${hasBuy && d.purchases.baseline ? `<div class="ghost">
       <b data-ghost>0</b><span>at the rate before she spoke</span></div>` : ''}
-    ${FX && hasBuy && (d.transcript||[]).length ? `<div class="pins">
+    ${hasBuy && (d.transcript||[]).length ? `<div class="pins">
       <div class="pinlab">Every name she says, and what lands in the six seconds after</div>
       <div class="pinbar" data-pins></div></div>` : ''}
     ${FX && !isNote ? `<div class="folk">
@@ -658,14 +658,14 @@ class Slide{
       </div></div>
       ${FX?`<div class="blast" data-blast></div>`:''}
       <div class="nosnd" data-nosnd><span>&#128266;</span>Tap for sound</div>
-      ${FX?`<div class="fxbar">
+      ${`<div class="fxbar">
         <div class="row"><span class="n" data-mn>0</span>
           <span class="u">${hasBuy?'albums bought':'messages'}</span>
           ${hasBuy&&d.purchases.baseline?`<span class="vs"><b data-mg>0</b>at the old rate</span>`
                                         :`<span class="vs"><b data-mp>0</b>people</span>`}</div>
         ${hasBuy&&(d.transcript||[]).length?`<div class="rail" data-mrail></div>
         <div class="who" data-mwho></div>`:''}
-      </div>`:''}
+      </div>`}
       ${d.preroll?`<div class="pre" data-pre>
         <div class="pn" data-pn>0</div>
         <div class="pl">${esc(d.preroll.note)}</div>
@@ -767,7 +767,7 @@ class Slide{
     this.preEl=this.el.querySelector('[data-pre]');
     this.outEl=this.el.querySelector('[data-outro]');
     this.seen=new Set(); this.buys=0; this.capAt=-1;
-    if(FX) this.fxBuild();
+    this.fxBuild();     // the flag-only parts no-op when their elements are absent
     this.at=d.start/1000;                 // playhead, in show seconds
     if(d.audio){
       this.audio=voiceEl();   // shared; pointed at this recording when it plays
@@ -899,13 +899,11 @@ class Slide{
     }
     if(this.bars.length) this.markHead(d.start/1000 + el);
     if(this.lv.phase && d.phaseLive && el>1.5) this.lv.phase.textContent=d.phaseLive;
-    if(FX){
-      // distinct people so far, advanced from wherever the count last reached
-      if(this._fkI===undefined){ this._fkI=0; this.fkSeen=new Set(); }
-      if(i<this._fkI){ this._fkI=0; this.fkSeen=new Set(); }   // replayed
-      for(; this._fkI<i; this._fkI++) this.fkSeen.add(d.msgs[this._fkI][1]);
-      this.fxTick(el, this.fkSeen.size);
-    }
+    // distinct people so far, advanced from wherever the count last reached
+    if(this._fkI===undefined){ this._fkI=0; this.fkSeen=new Set(); }
+    if(i<this._fkI){ this._fkI=0; this.fkSeen=new Set(); }   // replayed
+    for(; this._fkI<i; this._fkI++) this.fkSeen.add(d.msgs[this._fkI][1]);
+    this.fxTick(el, this.fkSeen.size);
   }
   markHead(sec){
     if(!this.lv.head)return;
@@ -1068,8 +1066,9 @@ class Slide{
      the counters carry on from where they stopped. */
   again(){
     if(this.hold) this.hold.classList.remove('on');
+    clearTimeout(this.preT);
     this.clearOutro();
-    if(FX){ this._fkI=undefined; this.fxReset(); }
+    this._fkI=undefined; this.fxReset();
     this.shown=0; this._lastI=undefined; this._bigV=undefined; this.buys=0;
     this._mw=undefined; this.capAt=-1;
     if(this.seen) this.seen.clear();
@@ -1298,6 +1297,17 @@ class Slide{
       else { this.preRAF=0; this.preEl.classList.remove('on'); next(); }
     };
     this.preRAF=requestAnimationFrame(step);
+    // frames are not guaranteed: a background tab, or Low Power Mode on a phone,
+    // throttles them and the run-up would sit there for ever and never hand over.
+    // This makes sure the clip starts regardless of whether the animation finishes.
+    clearTimeout(this.preT);
+    this.preT=setTimeout(()=>{
+      if(!this.preRAF) return;                       // the animation got there first
+      cancelAnimationFrame(this.preRAF); this.preRAF=0;
+      if(n) n.textContent=total;
+      this.preEl.classList.remove('on');
+      if(App.slides[App.cur]===this) next();
+    }, ms+600);
   }
 
   play(){
@@ -1348,10 +1358,11 @@ class Slide{
      old counters still on screen. One method now, doing all of it. */
   reset(){
     clearTimeout(this.dw); this.started=false;
+    clearTimeout(this.preT);
     if(!this.d) return;          // scrolled past before the moment finished loading
     this.openSide(false);
     this.clearOutro();
-    if(FX){ this._fkI=undefined; this.fxReset(); }
+    this._fkI=undefined; this.fxReset();
     this.pause();
     if(this.hold) this.hold.classList.remove('on');
     if(!this.gate) return;
