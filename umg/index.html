@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162258">
+<meta name="build" content="202610162301">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -493,7 +493,7 @@ function sidePanel(d){
      label is actually buying. The message count stays, quietly, underneath. */
   const unit = isNote ? 'members on the channel<br>any host can play it to'
              : hasBuy ? 'albums bought<br>since she started'
-                      : 'people talking<br>in this clip';
+                      : 'people chatting<br>in this clip';
   return `<div class="side" data-side>
     <div class="phase" data-phase>${esc(d.phaseStart||'Before it starts')}</div>
     <div class="claim">${d.claim||esc(d.title)}</div>
@@ -666,7 +666,7 @@ class Slide{
       <div class="nosnd" data-nosnd><span>&#128266;</span>Tap for sound</div>
       ${`<div class="fxbar">
         <div class="row"><span class="n" data-mn>0</span>
-          <span class="u">${hasBuy?'albums bought':'people talking'}</span>
+          <span class="u">${hasBuy?'albums bought':'people chatting'}</span>
           ${hasBuy&&d.purchases.baseline?`<span class="vs"><b data-mg>0</b>at the old rate</span>`
                                         :`<span class="vs"><b data-mp>0</b>messages</span>`}</div>
         ${hasBuy&&(d.transcript||[]).length?`<div class="rail" data-mrail></div>
