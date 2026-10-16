@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162020">
+<meta name="build" content="202610162025">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -504,24 +504,45 @@ function sidePanel(d){
   </div>`;
 }
 
-/* The voice track rides in a hidden inline <video>, not an <audio>. iOS obeys the
-   ringer switch for audio elements and ignores it for video, and is more willing to
-   start a video at all. The file is an MP4 container either way and carries only
-   audio, so nothing is shown; the element is parked off screen at 1px. */
-function voiceEl(src){
+/* ONE media element for the whole reel. There used to be one per moment, sixteen
+   of them, all created with preload=auto the moment the page loaded. iOS caps how
+   many media elements it will decode at once and the ones past the cap sit exactly
+   as JP saw them: readyState 4, not paused, and currentTime frozen on the seek
+   position for ever. Desktop has no such cap, which is why it always looked fine.
+   It is a <video> rather than an <audio> because iOS obeys the ringer switch for
+   audio and ignores it for video; the file is an MP4 carrying only audio, so there
+   is nothing to see and it sits off screen at one pixel. */
+let VOICE = null;
+function voiceEl(){
+  if(VOICE) return VOICE;
   const v=document.createElement('video');
   v.setAttribute('playsinline','');
   v.setAttribute('webkit-playsinline','');
   v.preload='auto';
   v.muted=false;
-  v.src=src;
   v.style.cssText='position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  // bound once, not once per moment, and handed to whichever moment is on screen
+  v.addEventListener('ended',()=>{ const s=App.slides[App.cur]; if(s){ s.playing=false; App.ended(s); } });
+  v.addEventListener('error',()=>{ const s=App.slides[App.cur]; if(s&&s.hush) s.hush(true); });
   document.body.appendChild(v);
+  VOICE=v;
   return v;
 }
+/* Point the shared element at this moment's recording and put it where the clock is. */
+function voiceTo(slide){
+  const a=voiceEl(), want=slide.d&&slide.d.audio;
+  if(!want) return a;
+  if(a.dataset.src!==want){
+    a.dataset.src=want;
+    a.src=want;
+    a.load();
+  }
+  const to=slide.at||0;
+  const seek=()=>{ if(Math.abs(a.currentTime-to)>0.4){ try{ a.currentTime=to; }catch(e){} } };
+  if(a.readyState>0) seek(); else a.addEventListener('loadedmetadata',seek,{once:true});
+  return a;
+}
 
-/* ?diag=1 prints what the media element is actually doing, so a phone I cannot
-   test on can report its own state instead of me guessing at it. */
 const DIAG = new URLSearchParams(location.search).get('diag') === '1';
 function diagPanel(){
   if(!DIAG) return;
@@ -682,13 +703,13 @@ class Slide{
     if(nosnd) nosnd.addEventListener('click',e=>{
       e.stopPropagation();
       if(!this.audio) return;
+      voiceTo(this);
       this.audio.muted=false;
       try{ this.audio.volume=1; }catch(err){}
       const p=this.audio.play();                 // a fresh gesture, which iOS may accept
       if(p&&p.then) p.then(()=>this.hush(false)).catch(()=>{});
       else this.hush(false);
     });
-    if(this.audio) this.audio.addEventListener('error',()=>this.hush(true));
     // the tap that starts the clip must not also reach the room's tap-to-pause,
     // which would see it already playing and stop it again
     this.gate.addEventListener('click',e=>{e.stopPropagation();App.unlock();this.begin(0);});
@@ -742,16 +763,7 @@ class Slide{
     if(FX) this.fxBuild();
     this.at=d.start/1000;                 // playhead, in show seconds
     if(d.audio){
-      this.audio=voiceEl(d.audio);
-      if(App.unlocked) App.prime(this);
-      this.audio.addEventListener('loadedmetadata',()=>{
-        if(this.audio.currentTime<d.start/1000)this.audio.currentTime=d.start/1000;
-      });
-      this.audio.addEventListener('timeupdate',()=>this.tick());
-      this.audio.addEventListener('ended',()=>{
-        this.playing=false;
-        if(App.slides[App.cur]===this) App.ended(this);
-      });
+      this.audio=voiceEl();   // shared; pointed at this recording when it plays
     }
     this.scale();
     this.draw(0);
@@ -840,13 +852,7 @@ class Slide{
         this.audio.currentTime=0; this.play();
       });
     }
-    this.audio=voiceEl(d.audio);
-    if(App.unlocked) App.prime(this);
-    this.audio.addEventListener('timeupdate',()=>this.tickNote());
-    this.audio.addEventListener('ended',()=>{
-      this.playing=false;
-      if(App.slides[App.cur]===this) App.ended(this);
-    });
+    this.audio=voiceEl();    // shared; pointed at this recording when it plays
     this.at=0; this.mic=true;
     this.scale();
   }
@@ -1308,10 +1314,18 @@ class Slide{
     },100);
     if(this.audio){
       // sound is a bonus now, so a refusal here costs the volume and nothing else
+      voiceTo(this);                       // the shared element now carries this moment
       this.audio.muted=false;
       try{ this.audio.volume=1; }catch(e){}
       let p; try{ p=this.audio.play(); }catch(e){ p=null; }
       if(p&&p.catch) p.catch(()=>{ this.hush(true); });
+      // reporting "playing" while the position never moves is a stall, not playback,
+      // and the room should admit it rather than imply there is sound
+      const was=this.audio.currentTime;
+      clearTimeout(this._stall);
+      this._stall=setTimeout(()=>{
+        if(this.playing && this.audio.currentTime===was) this.hush(true);
+      }, 2500);
     }
     this.playing=true;
     this.gate.style.display='none';
