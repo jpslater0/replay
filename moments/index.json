@@ -135,21 +135,6 @@
   "hasAudio": true
  },
  {
-  "id": "3523095:232900:45000",
-  "file": "moments/3523095_232900_45000.json",
-  "title": "Sabrina Carpenter",
-  "sub": "1 year of Man’s Best Friend",
-  "date": "29 August 2026",
-  "genre": "Western",
-  "channel": "Carpenters",
-  "accent": "#f7e7d4",
-  "msgCount": 1173,
-  "userCount": 635,
-  "peak": 62,
-  "listens": 9793,
-  "hasAudio": true
- },
- {
   "id": "3626682:4584950:27000",
   "file": "moments/3626682_4584950_27000.json",
   "title": "Victoria Monét",
