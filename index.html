@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162025">
+<meta name="build" content="202610162034">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,12 +13,19 @@
 body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overflow:hidden}
 
 /* ---------- feed ---------- */
-#feed{height:100vh;overflow-y:scroll;overflow-x:hidden;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+/* scroll-behavior is deliberately not set here: goTo asks for smooth when it wants
+   it, and a blanket smooth fights mandatory snap on a touch screen, which is one of
+   the ways the feed used to wedge. touch-action keeps a vertical drag as a feed
+   scroll wherever it lands. */
+#feed{height:100vh;overflow-y:scroll;overflow-x:hidden;scroll-snap-type:y mandatory;
+ touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 #feed::-webkit-scrollbar{display:none}
+/* no overflow:hidden here. The room is scaled down to fit so nothing of it paints
+   outside the slide, and only its layout box is oversized; hiding overflow made the
+   slide a scroll container of its own, which on a touch screen swallowed the drag
+   and left the feed stuck. The feed clips sideways instead. */
 .slide{height:100vh;scroll-snap-align:start;display:grid;place-items:center;position:relative;
- /* the room keeps its 460px layout box and is scaled down to fit, so on a narrow
-    screen that box is wider than the track and must not scroll the page sideways */
- overflow:hidden}
+ touch-action:pan-y}
 .fit{transform-origin:center center;display:flex;align-items:center;gap:30px;
  transition:transform .55s cubic-bezier(.3,.9,.3,1)}
 /* Scrolling stays a vertical feed, one room per screen, the way people already

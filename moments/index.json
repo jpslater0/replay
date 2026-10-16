@@ -193,50 +193,5 @@
   "peak": 23,
   "listens": 5243,
   "hasAudio": true
- },
- {
-  "id": "3584310:179500:30000",
-  "file": "moments/3584310_179500_30000.json",
-  "title": "ROSÉ",
-  "sub": "“new trick” listening party",
-  "date": "21 September 2026",
-  "genre": "K-pop",
-  "channel": "numberoneHQ",
-  "accent": "#222121",
-  "msgCount": 41,
-  "userCount": 27,
-  "peak": 4,
-  "listens": 1097,
-  "hasAudio": true
- },
- {
-  "id": "note:255",
-  "file": "moments/note_255.json",
-  "kind": "note",
-  "title": "LISA",
-  "sub": "a voice note to the channel",
-  "date": "24 September 2026",
-  "channel": "LILIES",
-  "accent": "#5c708f",
-  "msgCount": 0,
-  "userCount": 0,
-  "peak": 0,
-  "listens": 162165,
-  "hasAudio": true
- },
- {
-  "id": "note:256",
-  "file": "moments/note_256.json",
-  "kind": "note",
-  "title": "Nothing But Thieves",
-  "sub": "a voice note to the channel",
-  "date": "25 September 2026",
-  "channel": "Stray Dogs",
-  "accent": "#f4f8e4",
-  "msgCount": 0,
-  "userCount": 0,
-  "peak": 0,
-  "listens": 445,
-  "hasAudio": true
  }
 ]
