@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162309">
+<meta name="build" content="202610162327">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -244,6 +244,8 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 /* When the device refuses the sound the replay still runs, so say so and give a
    way back: this taps play() again from a fresh gesture, which is often all iOS
    wants. It is not shown unless the sound actually failed. */
+.snd{cursor:pointer}
+.snd.off{opacity:.45}
 .nosnd{position:absolute;left:50%;bottom:182px;transform:translateX(-50%);z-index:14;
  display:none;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;
  background:rgba(0,0,0,.82);color:#fff;font-size:12.5px;font-weight:700;
@@ -615,7 +617,7 @@ class Slide{
           <div class="cbtn"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
           <div class="hdT"><b>${esc(d.host)}</b><span>${esc(d.channel.tag)}</span></div>
           <div class="pill"># Threads</div>
-          <div class="cbtn">&#128266;</div>
+          <div class="cbtn snd" data-snd>&#128266;</div>
         </div>
         <div class="logo">${d.channel.logo
             ?`<img src="${d.channel.logo}" alt="${esc(d.channel.name)}">`
@@ -712,6 +714,16 @@ class Slide{
     this.cnt=this.el.querySelector('[data-cnt]');
     this.heartsEl=this.el.querySelector('[data-hearts]');
     this.gate=this.el.querySelector('[data-gate]');
+    // the speaker in the room header was decoration; it mutes now, which is where
+    // anybody would look for it and is where Stationhead puts it too
+    const snd=this.el.querySelector('[data-snd]');
+    if(snd) snd.addEventListener('click',e=>{
+      e.stopPropagation();                       // not a tap-to-pause
+      if(!this.audio) return;
+      this.audio.muted=!this.audio.muted;
+      snd.innerHTML = this.audio.muted ? '&#128263;' : '&#128266;';
+      snd.classList.toggle('off', this.audio.muted);
+    });
     const nosnd=this.el.querySelector('[data-nosnd]');   // this.lv is not built yet
     if(nosnd) nosnd.addEventListener('click',e=>{
       e.stopPropagation();
@@ -794,7 +806,7 @@ class Slide{
           <div class="cbtn"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
           <div class="hdT"><b>${esc(d.channel.name)}</b><span>${esc(d.channel.tag)}</span></div>
           <div class="pill"># Threads</div>
-          <div class="cbtn">&#128266;</div>
+          <div class="cbtn snd" data-snd>&#128266;</div>
         </div>
         <div class="logo">${d.channel.logo
           ?`<img src="${d.channel.logo}" alt="${esc(d.channel.name)}">`
@@ -1430,8 +1442,9 @@ const App={
       const prev=this.slides[this.cur];
       if(prev) prev.reset();
       this.cur=i; this.mark();
-      const s=this.slides[i];
-      if(s&&this.unlocked) s.begin(DWELL);        // card holds, then rolls
+      // no auto start. Arriving at a moment shows its card and waits to be asked;
+      // a reel that begins playing at you while you are still reading is worse than
+      // one that waits.
     };
     let syncT=0;
     const later=(ms)=>{ clearTimeout(syncT); syncT=setTimeout(sync,ms); };
