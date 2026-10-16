@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610161954">
+<meta name="build" content="202610162001">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -232,6 +232,15 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
  opacity:0;transform:scaleY(.4);transform-origin:center;
  transition:opacity .25s ease,transform .35s cubic-bezier(.2,1.5,.4,1)}
 .blast.on{opacity:1;transform:scaleY(1)}
+/* When the device refuses the sound the replay still runs, so say so and give a
+   way back: this taps play() again from a fresh gesture, which is often all iOS
+   wants. It is not shown unless the sound actually failed. */
+.nosnd{position:absolute;left:50%;bottom:182px;transform:translateX(-50%);z-index:14;
+ display:none;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;
+ background:rgba(0,0,0,.82);color:#fff;font-size:12.5px;font-weight:700;
+ white-space:nowrap;cursor:pointer}
+.ph.hush .nosnd{display:flex}
+.nosnd span{font-size:14px}
 /* On a phone there is no panel, so the same argument rides over the room in a
    strip: the number, the rate it would have been, and the names as they land. */
 .fxbar{position:absolute;left:0;right:0;top:62px;z-index:9;display:none;
@@ -574,6 +583,7 @@ class Slide{
         <button data-again><span>&#8635;</span><em>Again</em></button>
       </div></div>
       ${FX?`<div class="blast" data-blast></div>`:''}
+      <div class="nosnd" data-nosnd><span>&#128266;</span>Tap for sound</div>
       ${FX?`<div class="fxbar">
         <div class="row"><span class="n" data-mn>0</span>
           <span class="u">${hasBuy?'albums bought':'messages'}</span>
@@ -622,6 +632,17 @@ class Slide{
     this.cnt=this.el.querySelector('[data-cnt]');
     this.heartsEl=this.el.querySelector('[data-hearts]');
     this.gate=this.el.querySelector('[data-gate]');
+    const nosnd=this.el.querySelector('[data-nosnd]');   // this.lv is not built yet
+    if(nosnd) nosnd.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(!this.audio) return;
+      this.audio.muted=false;
+      try{ this.audio.volume=1; }catch(err){}
+      const p=this.audio.play();                 // a fresh gesture, which iOS may accept
+      if(p&&p.then) p.then(()=>this.hush(false)).catch(()=>{});
+      else this.hush(false);
+    });
+    if(this.audio) this.audio.addEventListener('error',()=>this.hush(true));
     // the tap that starts the clip must not also reach the room's tap-to-pause,
     // which would see it already playing and stop it again
     this.gate.addEventListener('click',e=>{e.stopPropagation();App.unlock();this.begin(0);});
@@ -648,6 +669,7 @@ class Slide{
              folk:this.el.querySelector('[data-folk]'),
              folkn:this.el.querySelector('[data-folkn]'),
              blast:this.el.querySelector('[data-blast]'),
+             nosnd:this.el.querySelector('[data-nosnd]'),
              mn:this.el.querySelector('[data-mn]'),
              mg:this.el.querySelector('[data-mg]'),
              mp:this.el.querySelector('[data-mp]'),
@@ -1171,6 +1193,11 @@ class Slide{
     }
   }
 
+  hush(on){
+    this.silent = !!on;
+    const ph=this.el.querySelector('.ph');
+    if(ph) ph.classList.toggle('hush', !!on);
+  }
   seek(t){ this.at=t; if(this.audio){ try{ this.audio.currentTime=t; }catch(e){} } }
 
   /* hold the intro card, then roll. ms=0 starts immediately. */
@@ -1236,8 +1263,10 @@ class Slide{
     },100);
     if(this.audio){
       // sound is a bonus now, so a refusal here costs the volume and nothing else
+      this.audio.muted=false;
+      try{ this.audio.volume=1; }catch(e){}
       let p; try{ p=this.audio.play(); }catch(e){ p=null; }
-      if(p&&p.catch) p.catch(()=>{ this.silent=true; });
+      if(p&&p.catch) p.catch(()=>{ this.hush(true); });
     }
     this.playing=true;
     this.gate.style.display='none';
@@ -1328,34 +1357,21 @@ const App={
     const c=document.getElementById('hudc');
     if(c&&this.slides.length>1)c.textContent=`${this.cur+1} of ${this.slides.length}`;
   },
-  /* iOS will only start an audio element if play() was first called inside a real
-     user gesture. begin() puts play() behind a timer, and preroll() puts it behind
-     a frame, so by the time it runs the gesture is gone and iOS refuses. With no
-     audio there is no timeupdate, and the chat is driven by timeupdate, so the
-     whole room sat there silent and still. Priming each element here, synchronously
-     in the tap, is what makes the later play() allowed. */
+  /* iOS wants play() called from a real gesture, so the tap runs straight through
+     to it with nothing deferred in between. It is deliberately NOT primed muted
+     first: a muted start can leave iOS treating the element as muted playback, and
+     unmuting afterwards does not reliably bring the sound back. */
   unlock(){
     if(this.unlocked) return;
     this.unlocked=true;
     for(const s of this.slides) this.prime(s);
   },
   prime(s){
+    // nothing is started ahead of time any more; sound begins only from a real tap,
+    // so this just makes sure nothing is left muted from an earlier attempt
     const a = s && s.audio;
-    if(!a || a._primed) return;
-    a._primed = true;
-    const back = a.muted;
-    a.muted = true;
-    let p; try { p = a.play(); } catch (e) { a.muted = back; return; }
-    const settle = () => {
-      a.muted = back;
-      // the tap that primed this is often the tap that starts it, and the priming
-      // tidy-up must not pause the playback that has already taken over
-      if (s.playing) return;
-      try { a.pause(); if(s.d) a.currentTime = s.d.start/1000; } catch (e) {}
-    };
-    if (p && p.then) p.then(settle).catch(settle); else settle();
+    if(a){ a.muted=false; try{ a.volume=1; }catch(e){} }
   },
-  /* scrollIntoView is unreliable inside a snap container; drive scrollTop directly */
   goTo(i){
     if(i<0||i>=this.slides.length)return;
     const feed=document.getElementById('feed');
