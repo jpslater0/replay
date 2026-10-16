@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162001">
+<meta name="build" content="202610162007">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -504,6 +504,22 @@ function sidePanel(d){
   </div>`;
 }
 
+/* The voice track rides in a hidden inline <video>, not an <audio>. iOS obeys the
+   ringer switch for audio elements and ignores it for video, and is more willing to
+   start a video at all. The file is an MP4 container either way and carries only
+   audio, so nothing is shown; the element is parked off screen at 1px. */
+function voiceEl(src){
+  const v=document.createElement('video');
+  v.setAttribute('playsinline','');
+  v.setAttribute('webkit-playsinline','');
+  v.preload='auto';
+  v.muted=false;
+  v.src=src;
+  v.style.cssText='position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  document.body.appendChild(v);
+  return v;
+}
+
 const DWELL=2900;   // how long an intro card holds before the clip starts
 
 /* ---------- one slide ---------- */
@@ -696,8 +712,7 @@ class Slide{
     if(FX) this.fxBuild();
     this.at=d.start/1000;                 // playhead, in show seconds
     if(d.audio){
-      this.audio=new Audio(d.audio);
-      this.audio.preload='auto';
+      this.audio=voiceEl(d.audio);
       if(App.unlocked) App.prime(this);
       this.audio.addEventListener('loadedmetadata',()=>{
         if(this.audio.currentTime<d.start/1000)this.audio.currentTime=d.start/1000;
@@ -795,7 +810,7 @@ class Slide{
         this.audio.currentTime=0; this.play();
       });
     }
-    this.audio=new Audio(d.audio); this.audio.preload='auto';
+    this.audio=voiceEl(d.audio);
     if(App.unlocked) App.prime(this);
     this.audio.addEventListener('timeupdate',()=>this.tickNote());
     this.audio.addEventListener('ended',()=>{
