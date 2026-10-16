@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162253">
+<meta name="build" content="202610162258">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -210,6 +210,8 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .readout .big.hit{animation:mpop .5s cubic-bezier(.2,1.5,.4,1)}
 /* ---------- web treatments (?fx=1) ---------- */
 /* The rate it would have been, next to the rate it is. The gap is the argument. */
+.among{font-size:12px;color:rgba(255,255,255,.5);font-weight:600;margin-top:-6px}
+.among b{color:rgba(255,255,255,.8);font-variant-numeric:tabular-nums}
 .ghost{display:flex;align-items:baseline;gap:7px;margin-top:-4px}
 .ghost b{font-size:26px;font-weight:800;color:rgba(255,255,255,.3);
  font-variant-numeric:tabular-nums;line-height:1}
@@ -486,15 +488,19 @@ function sidePanel(d){
   // A voice note has no show and no chat of its own, so it counts the thing it
   // actually reaches: everyone on the channel who can be played it.
   const isNote = d.kind==='note';
+  /* People, not messages. Messages flatter a room that a handful of accounts are
+     spamming; distinct people is the number that cannot be faked and the one a
+     label is actually buying. The message count stays, quietly, underneath. */
   const unit = isNote ? 'members on the channel<br>any host can play it to'
              : hasBuy ? 'albums bought<br>since she started'
-                      : 'messages<br>in this clip';
+                      : 'people talking<br>in this clip';
   return `<div class="side" data-side>
     <div class="phase" data-phase>${esc(d.phaseStart||'Before it starts')}</div>
     <div class="claim">${d.claim||esc(d.title)}</div>
     ${d.sub?`<div class="sub">${d.sub}</div>`:''}
     <div class="readout"><div class="big" data-big>${isNote?num(d.channel.members||0):'0'}</div>
       <div class="unit">${unit}</div></div>
+    ${isNote||hasBuy?'':`<div class="among"><b data-among>0</b> messages between them</div>`}
     ${hasBuy && d.purchases.baseline ? `<div class="ghost">
       <b data-ghost>0</b><span>at the rate before she spoke</span></div>` : ''}
     ${hasBuy && (d.transcript||[]).length ? `<div class="pins">
@@ -660,9 +666,9 @@ class Slide{
       <div class="nosnd" data-nosnd><span>&#128266;</span>Tap for sound</div>
       ${`<div class="fxbar">
         <div class="row"><span class="n" data-mn>0</span>
-          <span class="u">${hasBuy?'albums bought':'messages'}</span>
+          <span class="u">${hasBuy?'albums bought':'people talking'}</span>
           ${hasBuy&&d.purchases.baseline?`<span class="vs"><b data-mg>0</b>at the old rate</span>`
-                                        :`<span class="vs"><b data-mp>0</b>people</span>`}</div>
+                                        :`<span class="vs"><b data-mp>0</b>messages</span>`}</div>
         ${hasBuy&&(d.transcript||[]).length?`<div class="rail" data-mrail></div>
         <div class="who" data-mwho></div>`:''}
       </div>`}
@@ -739,6 +745,7 @@ class Slide{
              head:this.el.querySelector('[data-head]'),
              side:this.el.querySelector('[data-side]'),
              ghost:this.el.querySelector('[data-ghost]'),
+             among:this.el.querySelector('[data-among]'),
              pins:this.el.querySelector('[data-pins]'),
              folk:this.el.querySelector('[data-folk]'),
              folkn:this.el.querySelector('[data-folkn]'),
@@ -884,8 +891,14 @@ class Slide{
     }
     if(d.kind==='note') return;          // its number does not climb
     const hasBuy=!!(d.purchases&&d.purchases.perSec);
-    let v=i;
-    if(hasBuy){ v=0; for(const [t,n] of d.purchases.perSec) if(t<=el) v+=n; }
+    // distinct people so far, advanced from wherever the count last reached
+    if(this._fkI===undefined){ this._fkI=0; this.fkSeen=new Set(); }
+    if(i<this._fkI){ this._fkI=0; this.fkSeen=new Set(); }   // replayed
+    for(; this._fkI<i; this._fkI++) this.fkSeen.add(d.msgs[this._fkI][1]);
+    const people=this.fkSeen.size;
+    if(this.lv.among && i!==this._amg){ this._amg=i; this.lv.among.textContent=num(i); }
+    let v=hasBuy?0:people;
+    if(hasBuy){ for(const [t,n] of d.purchases.perSec) if(t<=el) v+=n; }
     if(v!==this._bigV){
       const was=this._bigV; this._bigV=v;
       if(this.lv.big){
@@ -899,11 +912,7 @@ class Slide{
     }
     if(this.bars.length) this.markHead(d.start/1000 + el);
     if(this.lv.phase && d.phaseLive && el>1.5) this.lv.phase.textContent=d.phaseLive;
-    // distinct people so far, advanced from wherever the count last reached
-    if(this._fkI===undefined){ this._fkI=0; this.fkSeen=new Set(); }
-    if(i<this._fkI){ this._fkI=0; this.fkSeen=new Set(); }   // replayed
-    for(; this._fkI<i; this._fkI++) this.fkSeen.add(d.msgs[this._fkI][1]);
-    this.fxTick(el, this.fkSeen.size);
+    this.fxTick(el, people);
   }
   markHead(sec){
     if(!this.lv.head)return;
@@ -1010,7 +1019,7 @@ class Slide{
     if(this.lv.mn) this.lv.mn.textContent = this.lv.big ? this.lv.big.textContent : '';
     if(this.lv.mg && d.purchases && d.purchases.baseline)
       this.lv.mg.textContent = Math.floor((d.purchases.baseline.perMin||0)/60*el);
-    if(this.lv.mp) this.lv.mp.textContent = num(people);
+    if(this.lv.mp && this.lv.big) this.lv.mp.textContent = this.lv.among ? this.lv.among.textContent : '';
     if(this.mPins){
       let said='';
       for(const p of this.mPins) if(el>=p.t){ p.win.classList.add('on'); if(p.nm) said=p.nm; }
@@ -1074,6 +1083,8 @@ class Slide{
     if(this.seen) this.seen.clear();
     if(this.box) this.box.innerHTML='';
     if(this.lv&&this.lv.big) this.lv.big.textContent='0';
+    if(this.lv&&this.lv.among) this.lv.among.textContent='0';
+    this._amg=undefined;
     if(this.lv&&this.lv.chips) this.lv.chips.innerHTML='';
     if(this.capEl){ this.capEl.textContent=''; this.capEl.classList.remove('on'); }
     if(this.lv&&this.lv.phase&&this.d.phaseLive) this.lv.phase.textContent=this.d.phaseLive;
@@ -1375,6 +1386,8 @@ class Slide{
     if(this.seen) this.seen.clear();
     if(this.d.kind!=='note') this.mic=null;
     if(this.lv&&this.lv.big) this.lv.big.textContent='0';
+    if(this.lv&&this.lv.among) this.lv.among.textContent='0';
+    this._amg=undefined;
     if(this.lv&&this.lv.chips) this.lv.chips.innerHTML='';
     if(this.capEl){ this.capEl.textContent=''; this.capEl.classList.remove('on'); }
     if(this.lv&&this.lv.phase&&this.d.phaseStart) this.lv.phase.textContent=this.d.phaseStart;
