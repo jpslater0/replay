@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610162034">
+<meta name="build" content="202610162043">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1392,19 +1392,31 @@ const App={
     await this.slides[0].load();
     this.slides.slice(1).forEach(s=>s.load());
 
+    /* Which moment is on screen comes from where the feed is scrolled to, not from an
+       IntersectionObserver. The observer was not reporting, so cur stayed on the
+       first moment however far you scrolled: the clip you had left carried on
+       playing, a tap on any other one was ignored because play() checks cur, and
+       when that abandoned clip finally ended it called goTo and dragged the feed
+       back under you. Scroll position cannot fail to report. */
+    const sync=()=>{
+      const h=feed.clientHeight;
+      if(!h) return;
+      const i=Math.max(0, Math.min(this.slides.length-1, Math.round(feed.scrollTop/h)));
+      if(i===this.cur) return;
+      const prev=this.slides[this.cur];
+      if(prev) prev.reset();
+      this.cur=i; this.mark();
+      const s=this.slides[i];
+      if(s&&this.unlocked) s.begin(DWELL);        // card holds, then rolls
+    };
+    let syncT=0;
+    const later=(ms)=>{ clearTimeout(syncT); syncT=setTimeout(sync,ms); };
+    feed.addEventListener('scroll',()=>later(90),{passive:true});   // after the snap settles
+    addEventListener('resize',()=>later(120));
+    // and the observer as well, because neither source is guaranteed on every engine
+    // and sync is idempotent: whichever reports first wins, the other does nothing
     const io=new IntersectionObserver(es=>{
-      es.forEach(e=>{
-        if(e.intersectionRatio>.6){
-          const i=this.slides.findIndex(s=>s.el===e.target);
-          if(i>=0&&i!==this.cur){
-            const prev=this.slides[this.cur];
-            if(prev)prev.reset();
-            this.cur=i; this.mark();
-            const s=this.slides[i];
-            if(s&&this.unlocked) s.begin(DWELL);   // card holds, then rolls
-          }
-        }
-      });
+      es.forEach(e=>{ if(e.intersectionRatio>.6) later(60); });
     },{threshold:[.6]});
     this.slides.forEach(s=>io.observe(s.el));
     this.mark();
@@ -1442,7 +1454,11 @@ const App={
     if(i<0||i>=this.slides.length)return;
     const feed=document.getElementById('feed');
     if(!feed)return;
-    feed.scrollTo({top:i*feed.clientHeight, behavior:'smooth'});
+    // not smooth: a smooth programmatic scroll inside a mandatory snap container is
+    // unreliable, it does not move the feed at all in testing, and a scroll animation
+    // that never finishes is a known way to wedge the scroller on iOS. The snap does
+    // the easing anyway.
+    feed.scrollTo({top:i*feed.clientHeight, behavior:'auto'});
   },
   silenceOthers(keep){
     for(const s of this.slides){
@@ -1465,6 +1481,14 @@ const App={
   },
   ended(s){
     const i=this.slides.indexOf(s);
+    // only carry on if the reader is still on the clip that ended. Advancing from a
+    // clip they scrolled away from is what pulled the feed out from under them.
+    const feed=document.getElementById('feed');
+    if(feed && feed.clientHeight){
+      const at=Math.round(feed.scrollTop/feed.clientHeight);
+      if(at!==i) return;
+    }
+    if(i!==this.cur) return;
     this.goTo(i+1<this.slides.length ? i+1 : 0);     // loop the reel
   },
   /* the outro plays from a different part of the show, so it reports that time */
