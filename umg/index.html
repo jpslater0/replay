@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202610160023">
+<meta name="build" content="202610161940">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -622,7 +622,9 @@ class Slide{
     this.cnt=this.el.querySelector('[data-cnt]');
     this.heartsEl=this.el.querySelector('[data-hearts]');
     this.gate=this.el.querySelector('[data-gate]');
-    this.gate.addEventListener('click',()=>{App.unlock();this.begin(0);});
+    // the tap that starts the clip must not also reach the room's tap-to-pause,
+    // which would see it already playing and stop it again
+    this.gate.addEventListener('click',e=>{e.stopPropagation();App.unlock();this.begin(0);});
     this.hold=this.el.querySelector('[data-hold]');
     const ph=this.el.querySelector('.ph');
     if(ph) ph.addEventListener('click',e=>{
@@ -674,6 +676,7 @@ class Slide{
     if(d.audio){
       this.audio=new Audio(d.audio);
       this.audio.preload='auto';
+      if(App.unlocked) App.prime(this);
       this.audio.addEventListener('loadedmetadata',()=>{
         if(this.audio.currentTime<d.start/1000)this.audio.currentTime=d.start/1000;
       });
@@ -751,7 +754,9 @@ class Slide{
     this.fit=this.el.querySelector('.fit');
     this.nowEl=this.el.querySelector('[data-now]');
     this.gate=this.el.querySelector('[data-gate]');
-    this.gate.addEventListener('click',()=>{App.unlock();this.begin(0);});
+    // the tap that starts the clip must not also reach the room's tap-to-pause,
+    // which would see it already playing and stop it again
+    this.gate.addEventListener('click',e=>{e.stopPropagation();App.unlock();this.begin(0);});
     this.lv={side:this.el.querySelector('[data-side]'),
              phase:this.el.querySelector('[data-phase]')};
     this.hold=this.el.querySelector('[data-hold]');
@@ -769,6 +774,7 @@ class Slide{
       });
     }
     this.audio=new Audio(d.audio); this.audio.preload='auto';
+    if(App.unlocked) App.prime(this);
     this.audio.addEventListener('timeupdate',()=>this.tickNote());
     this.audio.addEventListener('ended',()=>{
       this.playing=false;
@@ -1067,7 +1073,7 @@ class Slide{
     this.box.innerHTML=h.join('');
   }
 
-  now(){ return this.audio ? this.audio.currentTime : this.at; }
+  now(){ return (this.audio && !this.silent) ? this.audio.currentTime : this.at; }
 
   tick(){
     const d=this.d; if(d.kind==='note')return;
@@ -1173,11 +1179,13 @@ class Slide{
     }
     if(hint&&!App.unlocked) hint.textContent='Tap to start the reel';
     clearTimeout(this.dw);
-    this.dw=setTimeout(()=>{
+    const go=()=>{
       if(App.slides[App.cur]!==this) return;      // scrolled away while the card held
       this.gate.style.display='none';
       this.preroll(()=>this.play());
-    }, ms);
+    };
+    // a tap runs straight through, so the gesture is still alive at play()
+    if(ms<=0) go(); else this.dw=setTimeout(go, ms);
   }
 
   /* The contrast is the point: it was quiet for eight minutes, then she spoke.
@@ -1208,22 +1216,28 @@ class Slide{
     const s=this.d.start/1000;
     // the outro deliberately sits outside the clip, so it is not snapped back
     if(!this.outroOn&&(this.now()<s||this.now()>s+this.d.dur/1000))this.seek(s);
-    if(this.audio){
-      this.audio.play().catch(()=>{});
-    }else{
+    const clock=()=>{                       // drives the room when no audio does
       clearInterval(this.timer);
       let last=performance.now();
       this.timer=setInterval(()=>{
         const n=performance.now(); this.at+=(n-last)/1000; last=n; this.tick();
       },100);
-    }
+    };
+    if(this.audio){
+      // if the browser still refuses the audio, the room plays on silently rather
+      // than showing nothing at all: a muted replay beats a dead screen
+      const p=this.audio.play();
+      if(p&&p.catch) p.catch(()=>{ if(this.playing && App.slides[App.cur]===this){
+        this.at=this.now(); this.silent=true; clock(); } });
+    }else clock();
     this.playing=true;
     this.gate.style.display='none';
     this.openSide(true);
   }
   pause(){
     this.playing=false;
-    if(this.audio)this.audio.pause(); else clearInterval(this.timer);
+    clearInterval(this.timer);            // the fallback clock, if one is running
+    if(this.audio)this.audio.pause();
   }
   /* Leaving a slide. There were two reset() methods here and the second quietly
      won, so scrolling away and back resumed mid-clip with the old chat and the
@@ -1305,7 +1319,33 @@ const App={
     const c=document.getElementById('hudc');
     if(c&&this.slides.length>1)c.textContent=`${this.cur+1} of ${this.slides.length}`;
   },
-  unlock(){ this.unlocked=true; },
+  /* iOS will only start an audio element if play() was first called inside a real
+     user gesture. begin() puts play() behind a timer, and preroll() puts it behind
+     a frame, so by the time it runs the gesture is gone and iOS refuses. With no
+     audio there is no timeupdate, and the chat is driven by timeupdate, so the
+     whole room sat there silent and still. Priming each element here, synchronously
+     in the tap, is what makes the later play() allowed. */
+  unlock(){
+    if(this.unlocked) return;
+    this.unlocked=true;
+    for(const s of this.slides) this.prime(s);
+  },
+  prime(s){
+    const a = s && s.audio;
+    if(!a || a._primed) return;
+    a._primed = true;
+    const back = a.muted;
+    a.muted = true;
+    let p; try { p = a.play(); } catch (e) { a.muted = back; return; }
+    const settle = () => {
+      a.muted = back;
+      // the tap that primed this is often the tap that starts it, and the priming
+      // tidy-up must not pause the playback that has already taken over
+      if (s.playing) return;
+      try { a.pause(); if(s.d) a.currentTime = s.d.start/1000; } catch (e) {}
+    };
+    if (p && p.then) p.then(settle).catch(settle); else settle();
+  },
   /* scrollIntoView is unreliable inside a snap container; drive scrollTop directly */
   goTo(i){
     if(i<0||i>=this.slides.length)return;
