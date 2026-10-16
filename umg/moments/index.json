@@ -90,21 +90,6 @@
   "hasAudio": true
  },
  {
-  "id": "2892765:221000:45000",
-  "file": "moments/2892765_221000_45000.json",
-  "title": "Travis Japan",
-  "sub": "new album listening party",
-  "date": "1 December 2025",
-  "genre": "J-pop",
-  "channel": "Traja-Tan",
-  "accent": "#753bbd",
-  "msgCount": 651,
-  "userCount": 390,
-  "peak": 35,
-  "listens": 7333,
-  "hasAudio": true
- },
- {
   "id": "3533148:1199000:45000",
   "file": "moments/3533148_1199000_45000.json",
   "title": "King & Prince",
@@ -117,21 +102,6 @@
   "userCount": 683,
   "peak": 58,
   "listens": 13105,
-  "hasAudio": true
- },
- {
-  "id": "2917999:1007000:45000",
-  "file": "moments/2917999_1007000_45000.json",
-  "title": "BUS",
-  "sub": "VOL. 1 listening party",
-  "date": "12 December 2025",
-  "genre": "Thai pop",
-  "channel": "BUS",
-  "accent": "#454545",
-  "msgCount": 1131,
-  "userCount": 666,
-  "peak": 49,
-  "listens": 18827,
   "hasAudio": true
  }
 ]
