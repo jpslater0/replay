@@ -3,14 +3,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
-<meta name="build" content="202611031818">
+<meta name="build" content="202611031857">
 <title>Stationhead replay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* ---------- design system tokens ----------
+   Stationhead Foundation, the shared design system artifact, project/tokens.css.
+   Only the tokens this page actually uses are copied here; the rest of that file
+   is product chrome the reel has no equivalent of. The room's own values are not
+   here because they are per channel: theme() builds them from the accent, to the
+   .channel-theme rules in project/colors_and_type.css.
+   Before changing a number in this block, change it there first. */
+:root{
+  --radius-xs:2px; --radius-sm:5px; --radius-md:6px; --radius-lg:10px; --radius-pill:100px;
+  --bg-default:#0f0f14;   /* gray-90, the app canvas */
+  --fg-default:#ffffff;
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
-body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overflow:hidden}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg-default);color:var(--fg-default);overflow:hidden}
 
 /* ---------- feed ---------- */
 /* scroll-behavior is deliberately not set here: goTo asks for smooth when it wants
@@ -79,7 +91,7 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .hdT{flex:1;min-width:0}
 .hdT b{display:block;font-size:17px;font-weight:700;letter-spacing:-.2px}
 .hdT span{display:block;font-size:13px;opacity:.62;margin-top:1px}
-.pill{height:31px;border-radius:16px;background:var(--o10);display:flex;align-items:center;
+.pill{height:31px;border-radius:var(--radius-pill);background:var(--o10);display:flex;align-items:center;
  gap:5px;padding:0 13px;font-size:14px;font-weight:600}
 
 .logo{height:96px;margin-top:34px;display:grid;place-items:center;padding:0 46px}
@@ -87,16 +99,16 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .notechat{justify-content:center;gap:12px;padding:0 22px 20px;text-align:center}
 .notechat p{font-size:15px;line-height:1.45;opacity:.9}
 .notechat p.q{font-size:13px;opacity:.6;margin-top:2px}
-.wordmark{font-size:38px;font-weight:800;letter-spacing:-1px;text-align:center;line-height:1.05}
+.wordmark{font-size:38px;font-weight:700;letter-spacing:-1px;text-align:center;line-height:1.05}
 /* voice note: no show behind it, so the card is the whole screen */
 .note{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
  justify-content:center;gap:18px;padding:40px 30px;text-align:center}
 .note .lg{max-width:62%;max-height:130px;object-fit:contain}
-.note .wm{font-size:40px;font-weight:800;letter-spacing:-1.2px}
+.note .wm{font-size:40px;font-weight:700;letter-spacing:-1.2px}
 .note .who{font-size:13px;letter-spacing:1.2px;text-transform:uppercase;opacity:.7}
-.note .bar{width:100%;max-width:330px;height:62px;border-radius:31px;background:var(--o65);
- display:flex;align-items:center;gap:10px;padding:0 10px;color:#241419;margin-top:4px}
-.note .bar .av{width:44px;height:44px;border-radius:50%;background:rgba(36,20,25,.15);flex:0 0 auto}
+.note .bar{width:100%;max-width:330px;height:62px;border-radius:var(--radius-pill);background:var(--o65);
+ display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--chipink);margin-top:4px}
+.note .bar .av{width:44px;height:44px;border-radius:50%;background:rgba(25,25,33,.15);flex:0 0 auto}
 .note .nt{font-size:14px;opacity:.85}
 .hostwrap{display:flex;justify-content:center;align-items:flex-start;gap:16px;margin-top:46px}
 .spk{display:grid;place-items:center;width:84px}
@@ -111,7 +123,7 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .hb{width:15px;height:15px;border-radius:50%;background:rgba(0,0,0,.35);display:grid;
  place-items:center;font-size:8px}
 
-.now{margin:36px 16px 0;height:62px;border-radius:14px;background:var(--o10);
+.now{margin:36px 16px 0;height:62px;border-radius:var(--radius-lg);background:var(--o10);
  display:flex;align-items:center;gap:11px;padding:0 11px;position:relative;overflow:hidden}
 .now .art{width:44px;height:44px;border-radius:5px;flex:0 0 auto;background:var(--o20)}
 .now .meta{flex:1;min-width:0}
@@ -123,18 +135,18 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .eq i:nth-child(1){height:40%}.eq i:nth-child(2){height:90%;animation-delay:.15s}
 .eq i:nth-child(3){height:60%;animation-delay:.3s}.eq i:nth-child(4){height:100%;animation-delay:.45s}
 @keyframes eq{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
-.heart{height:38px;border-radius:19px;background:var(--o10);display:grid;place-items:center;
+.heart{height:38px;border-radius:var(--radius-pill);background:var(--o10);display:grid;place-items:center;
  padding:0 14px;font-size:15px;flex:0 0 auto}
-.now.voice{background:var(--o65);border-radius:31px;padding:0 9px;color:#241419}
-.now.voice .art{border-radius:50%;background:rgba(36,20,25,.15)}
+.now.voice{background:var(--o65);border-radius:var(--radius-pill);padding:0 9px;color:var(--chipink)}
+.now.voice .art{border-radius:50%;background:rgba(25,25,33,.15)}
 .wave{flex:1;display:flex;align-items:center;gap:2.5px;height:26px;min-width:0;overflow:hidden}
-.wave i{flex:0 0 2px;background:rgba(36,20,25,.26);border-radius:1px}
-.wave i.on{background:#241419}
+.wave i{flex:0 0 2px;background:rgba(25,25,33,.26);border-radius:1px}
+.wave i.on{background:var(--chipink)}
 .vtime{font-size:14px;font-weight:700;padding-right:6px;flex:0 0 auto;font-variant-numeric:tabular-nums}
 
 .row{display:flex;align-items:center;gap:9px;padding:16px 18px 0}
-.rule{flex:1;height:1.5px;background:var(--o20);border-radius:1px}
-.tag{height:26px;border-radius:13px;background:var(--o20);display:flex;align-items:center;
+.rule{flex:1;height:1.5px;background:var(--bd);border-radius:1px}
+.tag{height:26px;border-radius:var(--radius-pill);background:var(--o20);display:flex;align-items:center;
  gap:5px;padding:0 13px;font-size:12px;font-weight:700;letter-spacing:.3px}
 .tag.n{background:var(--o10);font-weight:600}
 .tag svg{width:12px;height:12px;fill:var(--ink)}
@@ -142,13 +154,13 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .shop{margin:10px 12px 0;border-radius:10px;background:#fbf4f7;color:#191016;
  display:flex;align-items:center;gap:10px;padding:8px 9px;position:relative;z-index:3;
  box-shadow:0 5px 14px rgba(0,0,0,.16)}
-.shop .th{width:34px;height:34px;border-radius:4px;flex:0 0 auto;background:#d8c6cd}
+.shop .th{width:34px;height:34px;border-radius:var(--radius-sm);flex:0 0 auto;background:#d8c6cd}
 .shop .st{flex:1;min-width:0}
 .shop .st b{display:block;font-size:13px;font-weight:700;line-height:1.2}
 .shop .st b i{font-style:normal;color:#1d9bf0;font-size:12px}
 .shop .st span{display:block;font-size:12px;color:#6c5560;margin-top:2px}
-.shopbtn{height:29px;border-radius:15px;background:#cacaca;color:#1a1a1a;font-size:13px;
- font-weight:800;letter-spacing:.4px;display:grid;place-items:center;padding:0 16px;flex:0 0 auto}
+.shopbtn{height:29px;border-radius:var(--radius-pill);background:#cacaca;color:#1a1a1a;font-size:13px;
+  font-weight:700;letter-spacing:.4px;display:grid;place-items:center;padding:0 16px;flex:0 0 auto}
 
 .chatwrap{flex:1;min-height:0;position:relative;margin-top:-14px;padding-top:14px}
 .chat{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
@@ -168,25 +180,25 @@ body{font-family:Inter,system-ui,sans-serif;background:#0d0b0e;color:#fff;overfl
 .mt{font-size:15px;line-height:1.3;margin-top:1px;word-break:break-word}
 .mt u{text-decoration:none;font-weight:700}
 
-.ask{margin:0 12px 8px;height:60px;border-radius:13px;background:var(--o10);
+.ask{margin:0 12px 8px;height:60px;border-radius:var(--radius-lg);background:var(--o10);
  display:flex;align-items:center;position:relative;z-index:3}
 .ask .mk{width:38px;height:38px;border-radius:50%;background:#6d4bf5;margin:0 11px;
  display:grid;place-items:center;flex:0 0 auto}
 .ask .mk svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
 .ask p{flex:1;font-size:14px;line-height:1.25}
-.ask .go{border-left:1px solid var(--o20);padding:0 18px;height:100%;display:grid;
+.ask .go{border-left:1px solid var(--bd);padding:0 18px;height:100%;display:grid;
  place-items:center;font-size:14px;font-weight:700;flex:0 0 auto}
 
 .cmp{display:flex;align-items:center;gap:9px;padding:0 12px 14px;position:relative;z-index:3}
 .cb{width:38px;height:38px;border-radius:50%;background:var(--o10);display:grid;
  place-items:center;flex:0 0 auto;position:relative;font-size:16px}
-.cb .n{position:absolute;top:-3px;left:-3px;min-width:17px;height:17px;border-radius:9px;
- background:var(--ink);color:var(--bg);font-size:10px;font-weight:800;display:grid;
+.cb .n{position:absolute;top:-3px;left:-3px;min-width:17px;height:17px;border-radius:var(--radius-pill);
+ background:var(--ink);color:var(--bg);font-size:10px;font-weight:700;display:grid;
  place-items:center;padding:0 4px}
-.inp{flex:1;height:38px;border-radius:19px;background:var(--o10);display:flex;align-items:center;
+.inp{flex:1;height:38px;border-radius:var(--radius-pill);background:var(--o10);display:flex;align-items:center;
  padding:0 6px 0 15px;font-size:15px;opacity:.85}
 .inp .gif{margin-left:auto;width:28px;height:28px;border-radius:50%;background:var(--o20);
- display:grid;place-items:center;font-size:9px;font-weight:800}
+ display:grid;place-items:center;font-size:9px;font-weight:700}
 
 .hearts{position:absolute;right:16px;bottom:78px;width:70px;height:280px;
  pointer-events:none;z-index:2;overflow:hidden}
@@ -428,11 +440,19 @@ function lum(hex){
   const n=parseInt(hex.slice(1),16);
   return (0.2126*((n>>16)&255)+0.7152*((n>>8)&255)+0.0722*(n&255))/255;
 }
+/* The room values are the design system's .channel-theme block, verbatim:
+   --bg-room 15% white, -emphasis 25%, --border-room 20%, and the chip is solid
+   white carrying gray-85. The wash is the accent darkened 30%, which is what
+   shade(accent,.70) already was. These were eyeballed off the app before the
+   system existed and sat a couple of points out.
+   The light-accent branch has no counterpart in the system, whose channel theme
+   assumes the wash is dark. Keeping it: without it a pale channel goes unreadable. */
 function theme(accent){
   const bg=shade(accent,.70), light=lum(bg)>.62;
-  const ink=light?'#241a1f':'#ffffff', base=light?'0,0,0':'255,255,255';
+  const ink=light?'#191921':'#ffffff', base=light?'0,0,0':'255,255,255';
   return {bg,ink,ring2:shade(accent,.80),ring1:shade(accent,.97),
-    o10:`rgba(${base},.14)`,o20:`rgba(${base},.31)`,o65:'rgba(255,255,255,.72)'};
+    o10:`rgba(${base},.15)`,o20:`rgba(${base},.25)`,bd:`rgba(${base},.20)`,
+    o65:'#ffffff',chipink:'#191921'};
 }
 
 const DEFAV=`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#2d142c"/>
